@@ -30,14 +30,14 @@ public class ApplicationConfig {
 
 	@Bean
 	public Docket apiDocket() {
-		String appContexUrl = "/mt-member-api.*";
+		String appContexUrl = "/.*";
 		return new Docket(DocumentationType.SWAGGER_2).apiInfo(getApiInfo()).useDefaultResponseMessages(false)
 				.genericModelSubstitutes(ResponseEntity.class).select().paths(PathSelectors.regex(appContexUrl))
 				.apis(RequestHandlerSelectors.any()).paths(PathSelectors.any()).build();
 	}
 
 	private ApiInfo getApiInfo() {
-		String appName = "MT Member API";
+		String appName = "MT Auth API";
 		
 		return new ApiInfo(appName, appName, "1.0", "",
 				new Contact(appName, appName, "EMAIL"), "LICENSE", "LICENSE URL",
