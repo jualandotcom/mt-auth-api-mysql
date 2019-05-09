@@ -9,13 +9,13 @@ public class AuthGetResponseModel extends ResponseModel {
 		super(requestModel);
 	}
 	
-	private TbAuth tbUsers;
+	private TbAuth tbAuth;
 
-	public TbAuth getTbUsers() {
-		return tbUsers;
+	public TbAuth getTbAuth() {
+		return tbAuth;
 	}
 
-	public void setTbUsers(TbAuth tbUsers) {
-		this.tbUsers = tbUsers;
+	public void setTbAuth(TbAuth tbAuth) {
+		this.tbAuth = tbAuth;
 	}
 }

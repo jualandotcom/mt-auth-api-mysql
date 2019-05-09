@@ -1,6 +1,7 @@
 package com.mt.member.api.controller;
 
 import java.util.Date;
+import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -23,6 +24,14 @@ import com.mt.member.api.db.entity.TbAuth;
 import com.mt.member.api.db.repository.TbAuthRepository;
 import com.mt.member.api.model.AuthAddRequestModel;
 import com.mt.member.api.model.AuthAddResponseModel;
+import com.mt.member.api.model.AuthCheckRequestModel;
+import com.mt.member.api.model.AuthCheckResponseModel;
+import com.mt.member.api.model.AuthGetRequestModel;
+import com.mt.member.api.model.AuthGetResponseModel;
+import com.mt.member.api.util.MD5;
+import com.mt.member.api.util.Token;
+
+import io.jsonwebtoken.Claims;
 
 @RestController
 @RequestMapping("/auth")
@@ -67,6 +76,70 @@ public class AuthController {
 			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
 			log.info("postAdd responseEntity : " + objectMapper.writeValueAsString(responseEntity));
 
+			return responseEntity;
+		}
+	}
+	
+	@PostMapping("/get")
+	@Transactional
+	public HttpEntity<?> postGet(@Valid @RequestBody AuthGetRequestModel requestModel) throws Exception {
+		requestModel.setTbaPassword(MD5.getInstance().get(requestModel.getTbaPassword()));
+		
+		AuthGetResponseModel responseModel = new AuthGetResponseModel(requestModel);
+		ResponseEntity<?> responseEntity = null;
+		
+		TbAuth exampleTbAuth = new TbAuth();
+		exampleTbAuth.setTbaEmail(requestModel.getTbaEmail());
+		exampleTbAuth.setTbaPassword(requestModel.getTbaPassword());
+		
+		Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
+		
+		if (optTbAuth.isPresent()) {
+			String token = Token.getInstance().get(optTbAuth.get().getTbaEmail());
+			
+			optTbAuth.get().setTbaToken(token);
+			
+			responseModel.setTbAuth(optTbAuth.get());
+			responseModel.setStatus("200");
+			
+			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
+			log.info("postGet responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+
+			return responseEntity;
+		} else {
+			responseModel.setStatus("401");
+			responseModel.setError("Invalid login");
+			
+			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.UNAUTHORIZED);
+			log.info("postGet responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+
+			return responseEntity;
+		}
+	}
+	
+	@PostMapping("/check")
+	@Transactional
+	public HttpEntity<?> postCheck(@Valid @RequestBody AuthCheckRequestModel requestModel) throws Exception {
+		AuthCheckResponseModel responseModel = new AuthCheckResponseModel(requestModel);
+		ResponseEntity<?> responseEntity = null;
+		
+		try {
+			Claims claims = Token.getInstance().claims(requestModel.getTbaToken());
+			responseModel.setClaims(claims);
+			
+			responseModel.setStatus("200");
+			
+			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
+			log.info("postCheck responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+			
+			return responseEntity;
+		} catch (Exception e) {
+			responseModel.setStatus("500");
+			responseModel.setError(e.getMessage());
+			
+			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.INTERNAL_SERVER_ERROR);
+			log.info("postCheck responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+			
 			return responseEntity;
 		}
 	}
