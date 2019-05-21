@@ -1,4 +1,4 @@
-package com.mt.member.api.model;
+package com.mt.auth.api.model;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

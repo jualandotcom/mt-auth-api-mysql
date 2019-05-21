@@ -1,4 +1,4 @@
-package com.mt.member.api.util;
+package com.mt.auth.api.util;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;

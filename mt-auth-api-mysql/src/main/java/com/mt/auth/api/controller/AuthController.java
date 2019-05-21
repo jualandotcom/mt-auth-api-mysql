@@ -1,4 +1,4 @@
-package com.mt.member.api.controller;
+package com.mt.auth.api.controller;
 
 import java.util.Date;
 import java.util.Optional;
@@ -20,16 +20,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mt.member.api.db.entity.TbAuth;
-import com.mt.member.api.db.repository.TbAuthRepository;
-import com.mt.member.api.model.AuthAddRequestModel;
-import com.mt.member.api.model.AuthAddResponseModel;
-import com.mt.member.api.model.AuthCheckRequestModel;
-import com.mt.member.api.model.AuthCheckResponseModel;
-import com.mt.member.api.model.AuthGetRequestModel;
-import com.mt.member.api.model.AuthGetResponseModel;
-import com.mt.member.api.util.MD5;
-import com.mt.member.api.util.Token;
+import com.mt.auth.api.db.entity.TbAuth;
+import com.mt.auth.api.db.repository.TbAuthRepository;
+import com.mt.auth.api.model.AuthAddRequestModel;
+import com.mt.auth.api.model.AuthAddResponseModel;
+import com.mt.auth.api.model.AuthCheckRequestModel;
+import com.mt.auth.api.model.AuthCheckResponseModel;
+import com.mt.auth.api.model.AuthGetRequestModel;
+import com.mt.auth.api.model.AuthGetResponseModel;
+import com.mt.auth.api.util.MD5;
+import com.mt.auth.api.util.Token;
 
 import io.jsonwebtoken.Claims;
 

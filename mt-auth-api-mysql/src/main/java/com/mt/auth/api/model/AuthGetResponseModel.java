@@ -1,7 +1,7 @@
-package com.mt.member.api.model;
+package com.mt.auth.api.model;
 
-import com.mt.member.api.db.entity.TbAuth;
-import com.mt.member.api.model.ResponseModel;
+import com.mt.auth.api.db.entity.TbAuth;
+import com.mt.auth.api.model.ResponseModel;
 
 public class AuthGetResponseModel extends ResponseModel {
 	

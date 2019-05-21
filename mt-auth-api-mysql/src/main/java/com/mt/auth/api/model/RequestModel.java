@@ -1,4 +1,4 @@
-package com.mt.member.api.model;
+package com.mt.auth.api.model;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;

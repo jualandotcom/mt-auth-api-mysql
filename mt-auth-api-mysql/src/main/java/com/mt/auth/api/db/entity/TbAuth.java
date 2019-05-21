@@ -1,4 +1,4 @@
-package com.mt.member.api.db.entity;
+package com.mt.auth.api.db.entity;
 
 import java.io.Serializable;
 import java.util.Date;
