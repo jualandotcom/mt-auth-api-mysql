@@ -3,6 +3,7 @@ package com.mt.auth.api.util;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Random;
 
 import io.jsonwebtoken.Claims;
@@ -13,10 +14,10 @@ public class Token {
 
 	private static Token singleton = new Token();
 
-	private static String key;
+	private static HashMap<String, String> keyMap;
 
 	public Token() {
-		key = generateString(36);
+		keyMap = new HashMap<String, String>();
 	}
 
 	private String generateString(int length) {
@@ -33,16 +34,24 @@ public class Token {
 		return singleton;
 	}
 
-	public String get(String name) {
+	public String generate(String email) {
 		LocalDateTime expiration = LocalDateTime.now();
 		expiration = expiration.plusDays(1);
+		
+		String salt = generateString(36);
+		keyMap.put(email, salt);
 
-		String token = Jwts.builder().setIssuer("mt-auth-api").setSubject("token").claim("name", name).claim("scope", "admins").setIssuedAt(new Date()).setExpiration(Date.from(expiration.atZone(ZoneId.systemDefault()).toInstant())).signWith(SignatureAlgorithm.HS256, key).compact();
+		String token = Jwts.builder().setIssuer("mt-auth-api").setSubject("token").claim("name", email).claim("scope", "admins").setIssuedAt(new Date()).setExpiration(Date.from(expiration.atZone(ZoneId.systemDefault()).toInstant())).signWith(SignatureAlgorithm.HS256, keyMap.get(email)).compact();
 
 		return token;
 	}
 
-	public Claims claims(String token) throws Exception {
-		return Jwts.parser().setSigningKey(key).parseClaimsJws(token).getBody();
+	public void invalidate(String email) {
+		String salt = generateString(36);
+		keyMap.put(email, salt);
+	}
+
+	public Claims claims(String email, String token) throws Exception {
+		return Jwts.parser().setSigningKey(keyMap.get(email)).parseClaimsJws(token).getBody();
 	}
 }

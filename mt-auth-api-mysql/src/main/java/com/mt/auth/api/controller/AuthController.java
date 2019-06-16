@@ -14,6 +14,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,11 +29,14 @@ import com.mt.auth.api.model.AuthCheckRequestModel;
 import com.mt.auth.api.model.AuthCheckResponseModel;
 import com.mt.auth.api.model.AuthGetRequestModel;
 import com.mt.auth.api.model.AuthGetResponseModel;
+import com.mt.auth.api.model.AuthInvalidateRequestModel;
+import com.mt.auth.api.model.AuthInvalidateResponseModel;
 import com.mt.auth.api.util.MD5;
 import com.mt.auth.api.util.Token;
 
 import io.jsonwebtoken.Claims;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -80,9 +84,9 @@ public class AuthController {
 		}
 	}
 	
-	@PostMapping("/get")
+	@PostMapping("/generate")
 	@Transactional
-	public HttpEntity<?> postGet(@Valid @RequestBody AuthGetRequestModel requestModel) throws Exception {
+	public HttpEntity<?> postGenerate(@Valid @RequestBody AuthGetRequestModel requestModel) throws Exception {
 		requestModel.setTbaPassword(MD5.getInstance().get(requestModel.getTbaPassword()));
 		
 		AuthGetResponseModel responseModel = new AuthGetResponseModel(requestModel);
@@ -95,11 +99,9 @@ public class AuthController {
 		Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
 		
 		if (optTbAuth.isPresent()) {
-			String token = Token.getInstance().get(optTbAuth.get().getTbaEmail());
+			String token = Token.getInstance().generate(optTbAuth.get().getTbaEmail());
 			
-			optTbAuth.get().setTbaToken(token);
-			
-			responseModel.setTbAuth(optTbAuth.get());
+			responseModel.setToken(token);
 			responseModel.setStatus("200");
 			
 			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
@@ -124,7 +126,7 @@ public class AuthController {
 		ResponseEntity<?> responseEntity = null;
 		
 		try {
-			Claims claims = Token.getInstance().claims(requestModel.getTbaToken());
+			Claims claims = Token.getInstance().claims(requestModel.getTbaEmail(), requestModel.getTbaToken());
 			responseModel.setClaims(claims);
 			
 			responseModel.setStatus("200");
@@ -143,4 +145,31 @@ public class AuthController {
 			return responseEntity;
 		}
 	}
+	
+	@PostMapping("/invalidate")
+	@Transactional
+	public HttpEntity<?> postInvalidate(@Valid @RequestBody AuthInvalidateRequestModel requestModel) throws Exception {
+		AuthInvalidateResponseModel responseModel = new AuthInvalidateResponseModel(requestModel);
+		ResponseEntity<?> responseEntity = null;
+		
+		try {
+			Token.getInstance().invalidate(requestModel.getTbaEmail());
+			
+			responseModel.setStatus("200");
+			
+			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
+			log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+			
+			return responseEntity;
+		} catch (Exception e) {
+			responseModel.setStatus("500");
+			responseModel.setError(e.getMessage());
+			
+			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.INTERNAL_SERVER_ERROR);
+			log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+			
+			return responseEntity;
+		}
+	}
+	
 }
