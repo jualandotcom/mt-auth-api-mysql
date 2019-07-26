@@ -7,13 +7,19 @@ import java.util.Random;
 public class ResponseModel {
 	
 	public ResponseModel(RequestModel requestModel) {
-		this.setRequestId(requestModel.getRequestId());
-		
-		this.setRequestDate(requestModel.getRequestDate());
-		
-		this.setResponseId(requestModel.getRequestId() + "-" + generateString(10));
-		
-		this.setResponseDate(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+		if (requestModel != null) {
+			this.setRequestId(requestModel.getRequestId());
+			
+			this.setRequestDate(requestModel.getRequestDate());
+			
+			this.setResponseId(requestModel.getRequestId() + "-" + generateString(10));
+			
+			this.setResponseDate(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+		} else {
+			this.setResponseId("get-" + generateString(10));
+			
+			this.setResponseDate(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+		}
 	}
 	
 	public String generateString(int length) {

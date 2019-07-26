@@ -15,11 +15,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mt.auth.api.db.entity.TbAuth;
 import com.mt.auth.api.db.repository.TbAuthRepository;
@@ -27,9 +30,8 @@ import com.mt.auth.api.model.AuthAddRequestModel;
 import com.mt.auth.api.model.AuthAddResponseModel;
 import com.mt.auth.api.model.AuthCheckRequestModel;
 import com.mt.auth.api.model.AuthCheckResponseModel;
-import com.mt.auth.api.model.AuthGetRequestModel;
-import com.mt.auth.api.model.AuthGetResponseModel;
-import com.mt.auth.api.model.AuthInvalidateRequestModel;
+import com.mt.auth.api.model.AuthGenerateRequestModel;
+import com.mt.auth.api.model.AuthGenerateResponseModel;
 import com.mt.auth.api.model.AuthInvalidateResponseModel;
 import com.mt.auth.api.util.MD5;
 import com.mt.auth.api.util.Token;
@@ -63,7 +65,7 @@ public class AuthController {
 		
 		if (tbAuthRepository.count(Example.of(exampleTbAuth)) > 0) {
 			responseModel.setStatus("208");
-			responseModel.setError("Email already exists");
+			responseModel.setMessage("Email already exists");
 
 			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.ALREADY_REPORTED);
 			log.info("postAdd responseEntity : " + objectMapper.writeValueAsString(responseEntity));
@@ -76,6 +78,7 @@ public class AuthController {
 			tbAuthRepository.save(tbAuth);
 			
 			responseModel.setStatus("200");
+			responseModel.setMessage("Email added");
 
 			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
 			log.info("postAdd responseEntity : " + objectMapper.writeValueAsString(responseEntity));
@@ -86,10 +89,10 @@ public class AuthController {
 	
 	@PostMapping("/generate")
 	@Transactional
-	public HttpEntity<?> postGenerate(@Valid @RequestBody AuthGetRequestModel requestModel) throws Exception {
+	public HttpEntity<?> postGenerate(@Valid @RequestBody AuthGenerateRequestModel requestModel) throws Exception {
 		requestModel.setTbaPassword(MD5.getInstance().get(requestModel.getTbaPassword()));
 		
-		AuthGetResponseModel responseModel = new AuthGetResponseModel(requestModel);
+		AuthGenerateResponseModel responseModel = new AuthGenerateResponseModel(requestModel);
 		ResponseEntity<?> responseEntity = null;
 		
 		TbAuth exampleTbAuth = new TbAuth();
@@ -101,8 +104,12 @@ public class AuthController {
 		if (optTbAuth.isPresent()) {
 			String token = Token.getInstance().generate(optTbAuth.get().getTbaEmail());
 			
+			Claims claims = Token.getInstance().claims(optTbAuth.get().getTbaEmail(), token);
+			responseModel.setClaims(claims);
+			
 			responseModel.setToken(token);
 			responseModel.setStatus("200");
+			responseModel.setMessage("Auth generated");
 			
 			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
 			log.info("postGet responseEntity : " + objectMapper.writeValueAsString(responseEntity));
@@ -130,6 +137,7 @@ public class AuthController {
 			responseModel.setClaims(claims);
 			
 			responseModel.setStatus("200");
+			responseModel.setMessage("Auth checked");
 			
 			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
 			log.info("postCheck responseEntity : " + objectMapper.writeValueAsString(responseEntity));
@@ -146,21 +154,37 @@ public class AuthController {
 		}
 	}
 	
-	@PostMapping("/invalidate")
-	@Transactional
-	public HttpEntity<?> postInvalidate(@Valid @RequestBody AuthInvalidateRequestModel requestModel) throws Exception {
-		AuthInvalidateResponseModel responseModel = new AuthInvalidateResponseModel(requestModel);
+	
+	@GetMapping("/invalidate/{tbaEmail}")
+	public HttpEntity<?> getProperties(@PathVariable String tbaEmail) throws JsonProcessingException {
+		AuthInvalidateResponseModel responseModel = new AuthInvalidateResponseModel(null);
 		ResponseEntity<?> responseEntity = null;
 		
 		try {
-			Token.getInstance().invalidate(requestModel.getTbaEmail());
+			TbAuth exampleTbAuth = new TbAuth();
+			exampleTbAuth.setTbaEmail(tbaEmail);
 			
-			responseModel.setStatus("200");
+			Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
 			
-			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
-			log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-			
-			return responseEntity;
+			if (optTbAuth.isPresent()) {
+				Token.getInstance().invalidate(tbaEmail);
+				
+				responseModel.setStatus("200");
+				responseModel.setMessage("Auth invalidated");
+				
+				responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
+				log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+				
+				return responseEntity;				
+			} else {
+				responseModel.setStatus("404");
+				responseModel.setMessage("Not found");
+
+				responseEntity = new ResponseEntity<>(responseModel, HttpStatus.NOT_FOUND);
+				log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+				
+				return responseEntity;				
+			}
 		} catch (Exception e) {
 			responseModel.setStatus("500");
 			responseModel.setError(e.getMessage());
@@ -172,4 +196,23 @@ public class AuthController {
 		}
 	}
 	
+	@GetMapping("/test")
+	@Transactional
+	public HttpEntity<?> postTest() {
+//		UserConfirmationResponseModel responseModel = new UserConfirmationResponseModel(new UserConfirmationRequestModel());
+//		
+//		AuthCheckRequestModel authCheckRequestModel = new AuthCheckRequestModel();
+//		authCheckRequestModel.setRequestDate("2019-03-21T16:56:50.706");
+//		authCheckRequestModel.setRequestId("0123456789");
+//		authCheckRequestModel.setTbaEmail("achmad.amri@gmail.com");
+//		authCheckRequestModel.setTbaToken("eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJtdC1hdXRoLWFwaSIsInN1YiI6InRva2VuIiwibmFtZSI6ImFjaG1hZC5hbXJpQGdtYWlsLmNvbSIsInNjb3BlIjoiYWRtaW5zIiwiaWF0IjoxNTU4MzM5Mzk2LCJleHAiOjE1NTg0MjU3OTZ9.TrcRAG78Bkxu7R9MAagqkb5jwrU22gDFXdaPNayBlBU");
+//		
+//		if (Auth.getInstance().check(authCheckRequestModel)) {
+//			return new ResponseEntity<>(responseModel, HttpStatus.OK);
+//		} else {
+//			return new ResponseEntity<>(responseModel, HttpStatus.INTERNAL_SERVER_ERROR);
+//		}
+		AuthAddRequestModel x = new AuthAddRequestModel();
+		return new ResponseEntity<>(x, HttpStatus.OK);
+	}
 }

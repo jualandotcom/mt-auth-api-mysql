@@ -45,7 +45,7 @@ public class TbAuth implements Serializable {
 	@Column(name="tba_password")
 	private String tbaPassword;
 
-	@Column(name="tba_token")
+	@Column(name="tba_token", length = 1000)
 	private String tbaToken;
 
 	@Column(name="tba_expired_date")

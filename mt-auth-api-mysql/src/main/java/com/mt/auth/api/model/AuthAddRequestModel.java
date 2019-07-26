@@ -2,8 +2,6 @@ package com.mt.auth.api.model;
 
 import javax.validation.constraints.NotNull;
 
-import com.mt.auth.api.model.RequestModel;
-
 public class AuthAddRequestModel extends RequestModel {
 
 	@NotNull(message = "Email is not null")
