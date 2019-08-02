@@ -62,16 +62,12 @@ public class AuthController {
 		
 		TbAuth exampleTbAuth = new TbAuth();
 		exampleTbAuth.setTbaEmail(requestModel.getTbaEmail());
+		Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
 		
-		if (tbAuthRepository.count(Example.of(exampleTbAuth)) > 0) {
+		optTbAuth.ifPresentOrElse(tbUser -> {
 			responseModel.setStatus("208");
 			responseModel.setMessage("Email already exists");
-
-			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.ALREADY_REPORTED);
-			log.info("postAdd responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-
-			return responseEntity;
-		} else {
+		}, () -> {
 			TbAuth tbAuth = modelMapper.map(requestModel, TbAuth.class);
 			tbAuth.setTbaCreateDate(new Date());
 			tbAuth.setTbaCreateId(0);
@@ -79,12 +75,12 @@ public class AuthController {
 			
 			responseModel.setStatus("200");
 			responseModel.setMessage("Email added");
+		});
+		
+		responseEntity = new ResponseEntity<>(responseModel, optTbAuth.isPresent() ? HttpStatus.ALREADY_REPORTED : HttpStatus.OK);
+		log.info("postAdd responseEntity : " + objectMapper.writeValueAsString(responseEntity));
 
-			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
-			log.info("postAdd responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-
-			return responseEntity;
-		}
+		return responseEntity;
 	}
 	
 	@PostMapping("/generate")
@@ -98,32 +94,31 @@ public class AuthController {
 		TbAuth exampleTbAuth = new TbAuth();
 		exampleTbAuth.setTbaEmail(requestModel.getTbaEmail());
 		exampleTbAuth.setTbaPassword(requestModel.getTbaPassword());
-		
 		Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
 		
-		if (optTbAuth.isPresent()) {
+		optTbAuth.ifPresentOrElse(tbUser -> {
 			String token = Token.getInstance().generate(optTbAuth.get().getTbaEmail());
 			
-			Claims claims = Token.getInstance().claims(optTbAuth.get().getTbaEmail(), token);
-			responseModel.setClaims(claims);
-			
-			responseModel.setToken(token);
-			responseModel.setStatus("200");
-			responseModel.setMessage("Auth generated");
-			
-			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
-			log.info("postGet responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-
-			return responseEntity;
-		} else {
+			try {
+				Claims claims = Token.getInstance().claims(optTbAuth.get().getTbaEmail(), token);
+				responseModel.setClaims(claims);
+				
+				responseModel.setToken(token);
+				responseModel.setStatus("200");
+				responseModel.setMessage("Auth generated");
+			} catch (Exception e) {
+				responseModel.setStatus("500");
+				responseModel.setError(e.getMessage());
+			}
+		}, () -> {
 			responseModel.setStatus("401");
 			responseModel.setError("Invalid login");
-			
-			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.UNAUTHORIZED);
-			log.info("postGet responseEntity : " + objectMapper.writeValueAsString(responseEntity));
+		});
+		
+		responseEntity = new ResponseEntity<>(responseModel, optTbAuth.isPresent() ? responseModel.getStatus().equals("200") ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR : HttpStatus.UNAUTHORIZED);
+		log.info("postGet responseEntity : " + objectMapper.writeValueAsString(responseEntity));
 
-			return responseEntity;
-		}
+		return responseEntity;
 	}
 	
 	@PostMapping("/check")
@@ -156,49 +151,34 @@ public class AuthController {
 	
 	
 	@GetMapping("/invalidate/{tbaEmail}")
-	public HttpEntity<?> getProperties(@PathVariable String tbaEmail) throws JsonProcessingException {
+	public HttpEntity<?> getInvalidate(@PathVariable String tbaEmail) throws JsonProcessingException {
 		AuthInvalidateResponseModel responseModel = new AuthInvalidateResponseModel(null);
 		ResponseEntity<?> responseEntity = null;
 		
-		try {
-			TbAuth exampleTbAuth = new TbAuth();
-			exampleTbAuth.setTbaEmail(tbaEmail);
+		
+		TbAuth exampleTbAuth = new TbAuth();
+		exampleTbAuth.setTbaEmail(tbaEmail);
+		Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
+		
+		optTbAuth.ifPresentOrElse(tbUser -> {
+			Token.getInstance().invalidate(tbaEmail);
 			
-			Optional<TbAuth> optTbAuth = tbAuthRepository.findOne(Example.of(exampleTbAuth));
-			
-			if (optTbAuth.isPresent()) {
-				Token.getInstance().invalidate(tbaEmail);
-				
-				responseModel.setStatus("200");
-				responseModel.setMessage("Auth invalidated");
-				
-				responseEntity = new ResponseEntity<>(responseModel, HttpStatus.OK);
-				log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-				
-				return responseEntity;				
-			} else {
-				responseModel.setStatus("404");
-				responseModel.setMessage("Not found");
+			responseModel.setStatus("200");
+			responseModel.setMessage("Auth invalidated");
+		}, () -> {
+			responseModel.setStatus("404");
+			responseModel.setMessage("Not found");
+		});
+		
+		responseEntity = new ResponseEntity<>(responseModel, optTbAuth.isPresent() ? HttpStatus.OK : HttpStatus.NOT_FOUND);
+		log.info("getInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
 
-				responseEntity = new ResponseEntity<>(responseModel, HttpStatus.NOT_FOUND);
-				log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-				
-				return responseEntity;				
-			}
-		} catch (Exception e) {
-			responseModel.setStatus("500");
-			responseModel.setError(e.getMessage());
-			
-			responseEntity = new ResponseEntity<>(responseModel, HttpStatus.INTERNAL_SERVER_ERROR);
-			log.info("postInvalidate responseEntity : " + objectMapper.writeValueAsString(responseEntity));
-			
-			return responseEntity;
-		}
+		return responseEntity;
 	}
 	
-	@GetMapping("/test")
-	@Transactional
-	public HttpEntity<?> postTest() {
+//	@GetMapping("/test")
+//	@Transactional
+//	public HttpEntity<?> postTest() {
 //		UserConfirmationResponseModel responseModel = new UserConfirmationResponseModel(new UserConfirmationRequestModel());
 //		
 //		AuthCheckRequestModel authCheckRequestModel = new AuthCheckRequestModel();
@@ -212,7 +192,7 @@ public class AuthController {
 //		} else {
 //			return new ResponseEntity<>(responseModel, HttpStatus.INTERNAL_SERVER_ERROR);
 //		}
-		AuthAddRequestModel x = new AuthAddRequestModel();
-		return new ResponseEntity<>(x, HttpStatus.OK);
-	}
+//		AuthAddRequestModel x = new AuthAddRequestModel();
+//		return new ResponseEntity<>(x, HttpStatus.OK);
+//	}
 }
